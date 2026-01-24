@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ultra DC Cable & Safety Calculator</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; margin: 20px; max-width: 950px; background-color: #f0f4f8; color: #2c3e50; }
+    .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    h2, h3 { color: #1e40af; margin-top: 0; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
+    .row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; align-items: flex-end; }
+    .input-group { display: flex; flex-direction: column; flex: 1; min-width: 150px; }
+    label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #4b5563; }
+    input, select { padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+    .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    .btn-add { background-color: #10b981; color: white; margin-bottom: 15px; }
+    .btn-calc { background-color: #2563eb; color: white; width: 100%; font-size: 18px; margin-top: 15px; }
+    .btn-reset { background-color: #6b7280; color: white; font-size: 12px; }
+    .btn-remove { background-color: #ef4444; color: white; padding: 8px; }
+    .load-row { background: #f9fafb; padding: 15px; border-radius: 10px; border: 1px solid #e5e7eb; margin-bottom: 10px; }
+    .out { font-family: 'Consolas', monospace; white-space: pre-wrap; background: #1e293b; color: #f8fafc; padding: 25px; border-radius: 10px; border-left: 8px solid #2563eb; font-size: 15px; line-height: 1.6; }
+    .warn-box { display: none; background: #fffbeb; border-left: 5px solid #f59e0b; padding: 15px; margin-top: 15px; color: #92400e; border-radius: 4px; }
+    .highlight { color: #60a5fa; font-weight: bold; }
+    .safe { color: #4ade80; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between;">
+      <h2>⚡ Pro DC Cable </h2>
+      <button class="btn btn-reset" onclick="resetAll()">Reset</button>
+    </div>
+    
+    <div class="row">
+      <div class="input-group">
+        <label>Τάση (V) [π.χ. -48]</label>
+        <input id="voltageV" type="number" value="12" step="any">
+      </div>
+      <div class="input-group">
+        <label>Τύπος Εγκατάστασης</label>
+        <select id="preset" onchange="applyPreset()">
+          <option value="3">Επαγγελματικό (3%)</option>
+          <option value="1.5">Telecom / Data (1.5%)</option>
+          <option value="5">Φωτισμός / Γενικό (5%)</option>
+          <option value="custom">Χειροκίνητα (%)</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Επιτρεπτή Πτώση (%)</label>
+        <input id="vdropPct" type="number" value="3" step="any">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="input-group">
+        <label>Μήκος l (m)</label>
+        <input id="lengthM" type="number" value="5" step="any">
+      </div>
+      <div class="input-group">
+        <label>Θερμοκρασία Περιβάλλοντος</label>
+        <select id="tempAmbient">
+          <option value="1.08">20°C (Δροσερό)</option>
+          <option value="1.0" selected>30°C (Κανονική)</option>
+          <option value="0.91">40°C (Ζέστη)</option>
+          <option value="0.82">50°C (Μηχανοστάσιο)</option>
+        </select>
+      </div>
+    </div>
+
+    <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+    <h3>Φορτία (Watt ή Amps)</h3>
+    <div id="loadContainer"></div>
+    <button class="btn btn-add" onclick="addLoadRow()">+ Προσθήκη Συσκευής</button>
+
+    <div class="row" style="margin-top:15px;">
+      <div class="input-group">
+        <label>Υλικό Καλωδίου</label>
+        <select id="gamma">
+          <option value="58">Χαλκός (Cu)</option>
+          <option value="35">Αλουμίνιο (Al)</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label>Μέτρηση</label>
+        <select id="roundTrip">
+          <option value="false">Απλή Διαδρομή (2xL)</option>
+          <option value="true">Συνολικό Μήκος (L)</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn btn-calc" onclick="calculate()">Εκτέλεση Υπολογισμού</button>
+  </div>
+
+  <div class="card">
+    <h3>Αποτελέσματα Μελέτης</h3>
+    <div class="out" id="results">Εισάγετε δεδομένα...</div>
+    <div id="warnBox" class="warn-box"></div>
+  </div>
+
+<script>
+  const WIRE_DB = [
+    {s: 0.75, maxI: 6}, {s: 1, maxI: 10}, {s: 1.5, maxI: 15.5}, {s: 2.5, maxI: 21},
+    {s: 4, maxI: 28}, {s: 6, maxI: 36}, {s: 10, maxI: 50}, {s: 16, maxI: 68},
+    {s: 25, maxI: 89}, {s: 35, maxI: 110}, {s: 50, maxI: 134}, {s: 70, maxI: 171},
+    {s: 95, maxI: 207}, {s: 120, maxI: 239}, {s: 150, maxI: 275}, {s: 240, maxI: 370}
+  ];
+
+  const FUSES = [1, 2, 3, 5, 7.5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 100, 125, 150, 200, 250, 300];
+
+  function applyPreset() {
+    const p = document.getElementById('preset').value;
+    if (p !== "custom") document.getElementById('vdropPct').value = p;
+  }
+
+  function addLoadRow() {
+    const div = document.createElement('div');
+    div.className = 'row load-row';
+    div.innerHTML = `
+      <div class="input-group"><label>Μονάδα</label><select class="l-type"><option value="A">Amps</option><option value="W">Watts</option></select></div>
+      <div class="input-group"><label>Τιμή</label><input type="number" class="l-val" value="10"></div>
+      <button class="btn btn-remove" onclick="this.parentElement.remove()">✖</button>
+    `;
+    document.getElementById('loadContainer').appendChild(div);
+  }
+
+  function resetAll() {
+    document.getElementById('loadContainer').innerHTML = '';
+    addLoadRow();
+    document.getElementById('results').innerText = 'Εισάγετε δεδομένα...';
+    document.getElementById('warnBox').style.display = 'none';
+  }
+
+  function calculate() {
+    const res = document.getElementById('results');
+    const wb = document.getElementById('warnBox');
+    wb.style.display = 'none';
+
+    try {
+      const U = Math.abs(parseFloat(document.getElementById('voltageV').value));
+      const L = parseFloat(document.getElementById('lengthM').value);
+      const gamma = parseFloat(document.getElementById('gamma').value);
+      const dropPct = parseFloat(document.getElementById('vdropPct').value);
+      const tempF = parseFloat(document.getElementById('tempAmbient').value);
+      const isRT = document.getElementById('roundTrip').value === 'true';
+
+      let totalA = 0, totalW = 0;
+      document.querySelectorAll('.load-row').forEach(row => {
+        const val = parseFloat(row.querySelector('.l-val').value) || 0;
+        if (row.querySelector('.l-type').value === 'A') { totalA += val; totalW += val * U; }
+        else { totalW += val; totalA += val / U; }
+      });
+
+      if (totalA <= 0) throw new Error("Προσθέστε τουλάχιστον ένα φορτίο.");
+
+      const factor = isRT ? 1.0 : 2.0;
+      const Sreq = (factor * totalA * L) / (gamma * (U * dropPct / 100));
+      
+      let wire = WIRE_DB.find(w => w.s >= Sreq && (w.maxI * tempF) >= totalA);
+      if (!wire) throw new Error("Φορτίο εκτός ορίων!");
+
+      const dI = wire.maxI * tempF;
+      const fuse = FUSES.find(f => f >= totalA * 1.25);
+      const dvR = (factor * totalA * L) / (gamma * wire.s);
+
+      let h = `ΣΥΝΟΛΟ: ${totalW.toFixed(1)}W | <span class="highlight">${totalA.toFixed(2)}A</span>\n`;
+      h += `----------------------------------------\n`;
+      h += `ΚΑΛΩΔΙΟ:     <span class="safe">${wire.s} mm²</span> (Αντοχή: ${dI.toFixed(1)}A)\n`;
+      h += `ΑΣΦΑΛΕΙΑ:    <span class="highlight">${fuse || 'N/A'} A</span>\n`;
+      h += `----------------------------------------\n`;
+      h += `ΠΤΩΣΗ ΤΑΣΗΣ: ${dvR.toFixed(2)}V (${((dvR/U)*100).toFixed(2)}%)\n`;
+      h += `ΑΠΩΛΕΙΑ:     ${(totalA * dvR).toFixed(1)} Watt\n`;
+
+      if (fuse > dI) {
+        wb.innerHTML = `⚠️ <strong>ΚΙΝΔΥΝΟΣ:</strong> Η ασφάλεια είναι μεγαλύτερη από την αντοχή του καλωδίου λόγω θερμοκρασίας!`;
+        wb.style.display = 'block';
+      }
+      res.innerHTML = h;
+    } catch (e) { res.innerHTML = `<span style="color:#f87171;">Σφάλμα: ${e.message}</span>`; }
+  }
+  window.onload = addLoadRow;
+</script>
+</body>
+</html>
