@@ -26,7 +26,7 @@
 <body>
 
   <div class="card">
-    <h2>⚡ Επαγγελματικός Υπολογισμός DC</h2>
+    <h2>⚡ Υπολογισμός DC</h2>
     
     <label>Τι αντιπροσωπεύει η ένταση (Amper);</label>
     <div class="mode-selector">
@@ -128,7 +128,7 @@
       let h = `Mode: ${currentMode === 'load' ? 'ΚΑΤΑΝΑΛΩΣΗ' : 'ΑΣΦΑΛΕΙΑ'}\n`;
       h += `------------------------------------------\n`;
       h += `ΕΠΙΛΕΓΜΕΝΟ ΚΑΛΩΔΙΟ:  <span class="safe">${wire.s} mm²</span>\n`;
-      h += `ΟΝΟΜΑΤΙΚΗ ΑΣΦΑΛΕΙΑ:  <span class="highlight">${targetFuse} A</span>\n`;
+      h += `ΟΝΟΜΑΣΤΙΚΗ ΑΣΦΑΛΕΙΑ:  <span class="highlight">${targetFuse} A</span>\n`;
       h += `ΑΝΤΟΧΗ ΣΤΟΥΣ ${document.getElementById('tempAmbient').options[document.getElementById('tempAmbient').selectedIndex].text.split(' ')[0]}: ${(wire.maxI * tempF).toFixed(1)} A\n`;
       h += `------------------------------------------\n`;
       h += `ΠΤΩΣΗ ΤΑΣΗΣ:         ${actualDropV.toFixed(2)} V (${actualDropPct.toFixed(2)}%)\n`;
@@ -142,3 +142,4 @@
 </script>
 </body>
 </html>
+
