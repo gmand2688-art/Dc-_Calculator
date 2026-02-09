@@ -28,16 +28,22 @@
   <div class="card">
     <h2>⚡ Υπολογισμός DC</h2>
     
-    <label>Τι αντιπροσωπεύει η ένταση (Amper);</label>
+    <label>Τι αντιπροσωπεύει η εισαγωγή σου;</label>
     <div class="mode-selector">
       <button id="modeLoad" class="mode-btn active" onclick="setMode('load')">Πραγματική Κατανάλωση</button>
       <button id="modeFuse" class="mode-btn" onclick="setMode('fuse')">Ονομαστική Ασφάλεια</button>
     </div>
 
     <div class="row">
-      <div class="input-group">
-        <label id="ampLabel">Ένταση (A)</label>
-        <input id="inputAmps" type="number" value="80" step="any">
+      <div class="input-group" style="flex: 2;">
+        <label id="inputLabel">Τιμή Φορτίου</label>
+        <div style="display: flex; gap: 5px;">
+          <input id="inputValue" type="number" value="80" step="any" style="flex: 1;">
+          <select id="unitType" style="width: 100px;">
+            <option value="A">Amper (A)</option>
+            <option value="W">Watt (W)</option>
+          </select>
+        </div>
       </div>
       <div class="input-group">
         <label>Τάση (V)</label>
@@ -91,33 +97,42 @@
     currentMode = mode;
     document.getElementById('modeLoad').classList.toggle('active', mode === 'load');
     document.getElementById('modeFuse').classList.toggle('active', mode === 'fuse');
-    document.getElementById('ampLabel').innerText = mode === 'load' ? "Ένταση Κατανάλωσης (A)" : "Ονομαστική Ασφάλεια (A)";
+    document.getElementById('inputLabel').innerText = mode === 'load' ? "Τιμή Κατανάλωσης" : "Τιμή Ασφάλειας";
   }
 
   function calculate() {
     try {
-      const I_input = parseFloat(document.getElementById('inputAmps').value);
+      const valInput = parseFloat(document.getElementById('inputValue').value);
       const U = parseFloat(document.getElementById('voltageV').value);
       const L = parseFloat(document.getElementById('lengthM').value);
       const dropPct = parseFloat(document.getElementById('vdropPct').value);
       const tempF = parseFloat(document.getElementById('tempAmbient').value);
+      const unit = document.getElementById('unitType').value;
       const gamma = 59.5; // Χαλκός
+
+      if (isNaN(valInput) || isNaN(U) || U <= 0) throw new Error("Παρακαλώ εισάγετε έγκυρες τιμές.");
+
+      // Μετατροπή Watt σε Amper αν χρειάζεται
+      let I_load;
+      if (unit === 'W') {
+        I_load = valInput / U;
+      } else {
+        I_load = valInput;
+      }
 
       let targetLoad, targetFuse;
 
       if (currentMode === 'load') {
-        targetLoad = I_input;
+        targetLoad = I_load;
         targetFuse = FUSES.find(f => f >= targetLoad * 1.25) || "N/A";
       } else {
-        targetFuse = I_input;
-        targetLoad = I_input;
+        targetFuse = I_load;
+        targetLoad = I_load;
       }
 
-      // Τύπος Πτώσης Τάσης από την εικόνα σου
       const maxDropV = U * (dropPct / 100);
       const s_req = (2 * L * targetLoad) / (gamma * maxDropV);
 
-      // Επιλογή καλωδίου βάσει πτώσης τάσης ΚΑΙ θερμικής αντοχής (maxI * tempF >= Fuse)
       let wire = WIRE_DB.find(w => w.s >= s_req && (w.maxI * tempF) >= (currentMode === 'load' ? (targetFuse === "N/A" ? targetLoad : targetFuse) : targetFuse));
 
       if (!wire) throw new Error("Δεν βρέθηκε επαρκές καλώδιο για αυτά τα δεδομένα.");
@@ -125,10 +140,11 @@
       const actualDropV = (2 * L * targetLoad) / (gamma * wire.s);
       const actualDropPct = (actualDropV / U) * 100;
 
-      let h = `Mode: ${currentMode === 'load' ? 'ΚΑΤΑΝΑΛΩΣΗ' : 'ΑΣΦΑΛΕΙΑ'}\n`;
+      let h = `Mode: ${currentMode === 'load' ? 'ΚΑΤΑΝΑΛΩΣΗ' : 'ΑΣΦΑΛΕΙΑ'} (${unit})\n`;
       h += `------------------------------------------\n`;
+      h += `ΣΥΝΟΛΙΚΟ ΦΟΡΤΙΟ:     <span class="highlight">${targetLoad.toFixed(2)} A</span> (${(targetLoad * U).toFixed(1)} W)\n`;
       h += `ΕΠΙΛΕΓΜΕΝΟ ΚΑΛΩΔΙΟ:  <span class="safe">${wire.s} mm²</span>\n`;
-      h += `ΟΝΟΜΑΣΤΙΚΗ ΑΣΦΑΛΕΙΑ:  <span class="highlight">${targetFuse} A</span>\n`;
+      h += `ΟΝΟΜΑΣΤΙΚΗ ΑΣΦΑΛΕΙΑ: <span class="highlight">${targetFuse} A</span>\n`;
       h += `ΑΝΤΟΧΗ ΣΤΟΥΣ ${document.getElementById('tempAmbient').options[document.getElementById('tempAmbient').selectedIndex].text.split(' ')[0]}: ${(wire.maxI * tempF).toFixed(1)} A\n`;
       h += `------------------------------------------\n`;
       h += `ΠΤΩΣΗ ΤΑΣΗΣ:         ${actualDropV.toFixed(2)} V (${actualDropPct.toFixed(2)}%)\n`;
@@ -142,4 +158,3 @@
 </script>
 </body>
 </html>
-
