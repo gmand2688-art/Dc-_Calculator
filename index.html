@@ -1,18 +1,37 @@
-
 <!doctype html>
 <html lang="el">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Advanced DC Cable & Temp Calculator</title>
   <style>
     body { font-family: 'Segoe UI', sans-serif; margin: 20px; max-width: 950px; background-color: #f0f4f8; color: #2c3e50; }
     .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); margin-bottom: 20px; }
     h2, h3 { color: #1e40af; margin-top: 0; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; }
-    .row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; align-items: flex-end; }
-    .input-group { display: flex; flex-direction: column; flex: 1; min-width: 150px; }
+    
+    /* Responsive Row */
+    .row { 
+      display: flex; 
+      gap: 15px; 
+      flex-wrap: wrap; 
+      margin-bottom: 15px; 
+      align-items: flex-end; 
+    }
+    
+    .input-group { 
+      display: flex; 
+      flex-direction: column; 
+      flex: 1 1 150px; 
+    }
+
+    /* Ειδική κλάση για το πεδίο που έχει το Select */
+    .combined-input {
+      display: flex;
+      gap: 10px;
+    }
+
     label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #4b5563; }
-    input, select { padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; }
+    input, select { padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
     
     .mode-selector { display: flex; background: #e5e7eb; border-radius: 8px; padding: 5px; margin-bottom: 20px; }
     .mode-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.3s; }
@@ -22,6 +41,15 @@
     .out { font-family: 'Consolas', monospace; white-space: pre-wrap; background: #1e293b; color: #f8fafc; padding: 25px; border-radius: 10px; border-left: 8px solid #2563eb; font-size: 15px; line-height: 1.6; }
     .highlight { color: #60a5fa; font-weight: bold; }
     .safe { color: #4ade80; font-weight: bold; }
+
+    /* Media Query για Κινητά */
+    @media (max-width: 600px) {
+      body { margin: 10px; }
+      .row { flex-direction: column; align-items: stretch; gap: 15px; }
+      .input-group { flex: 1 1 100%; }
+      .combined-input { gap: 8px; }
+      .combined-input select { width: 120px; } /* Μικρότερο πλάτος για το select στο κινητό */
+    }
   </style>
 </head>
 <body>
@@ -38,18 +66,20 @@
     <div class="row">
       <div class="input-group" style="flex: 2;">
         <label id="inputLabel">Τιμή Φορτίου</label>
-        <div style="display: flex; gap: 80px;">
-          <input id="inputValue" type="number" value="80" step="any" style="flex: 1;">
-          <select id="unitType" style="width: 150px;">
+        <div class="combined-input">
+          <input id="inputValue" type="number" value="80" step="any">
+          <select id="unitType" style="width: 140px;">
             <option value="A">Amper (A)</option>
             <option value="W">Watt (W)</option>
           </select>
         </div>
       </div>
+      
       <div class="input-group">
         <label>Τάση (V)</label>
         <input id="voltageV" type="number" value="48" step="any">
       </div>
+      
       <div class="input-group">
         <label>Μήκος l (m)</label>
         <input id="lengthM" type="number" value="15" step="any">
@@ -109,11 +139,10 @@
       const dropPct = parseFloat(document.getElementById('vdropPct').value);
       const tempF = parseFloat(document.getElementById('tempAmbient').value);
       const unit = document.getElementById('unitType').value;
-      const gamma = 59.5; // Χαλκός
+      const gamma = 59.5; 
 
       if (isNaN(valInput) || isNaN(U) || U <= 0) throw new Error("Παρακαλώ εισάγετε έγκυρες τιμές.");
 
-      // Μετατροπή Watt σε Amper αν χρειάζεται
       let I_load;
       if (unit === 'W') {
         I_load = valInput / U;
@@ -143,7 +172,7 @@
 
       let h = `Mode: ${currentMode === 'load' ? 'ΚΑΤΑΝΑΛΩΣΗ' : 'ΑΣΦΑΛΕΙΑ'} (${unit})\n`;
       h += `------------------------------------------\n`;
-      h += `ΣΥΝΟΛΙΚΟ ΦΟΡΤΙΟ:     <span class="highlight">${targetLoad.toFixed(2)} A</span> (${(targetLoad * U).toFixed(1)} W)\n`;
+      h += `ΣΥΝΟΛΙΚΟ ΦΟΡΤΙΟ:      <span class="highlight">${targetLoad.toFixed(2)} A</span> (${(targetLoad * U).toFixed(1)} W)\n`;
       h += `ΕΠΙΛΕΓΜΕΝΟ ΚΑΛΩΔΙΟ:  <span class="safe">${wire.s} mm²</span>\n`;
       h += `ΟΝΟΜΑΣΤΙΚΗ ΑΣΦΑΛΕΙΑ: <span class="highlight">${targetFuse} A</span>\n`;
       h += `ΑΝΤΟΧΗ ΣΤΟΥΣ ${document.getElementById('tempAmbient').options[document.getElementById('tempAmbient').selectedIndex].text.split(' ')[0]}: ${(wire.maxI * tempF).toFixed(1)} A\n`;
@@ -159,4 +188,3 @@
 </script>
 </body>
 </html>
-
